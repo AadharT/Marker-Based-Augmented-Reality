@@ -107,21 +107,21 @@ def drawGLScene():
         ret, frame = cap.read()
         if ret == True:
                 #image_arr = array(frame)
-                #draw_background(frame)
+                draw_background(frame)
 
                 glutPostRedisplay()
                 glMatrixMode(GL_MODELVIEW)
                 glLoadIdentity()
-                ar_list = detect_markers(frame)
-                for i in ar_list:
-##                        if i[0] == 8:
-##                                overlay(frame, ar_list, i[0],"texture_1.png")
-##                        if i[0] == 2:
-##                                overlay(frame, ar_list, i[0],"texture_2.png")
-##                        if i[0] == 7:
-##                                overlay(frame, ar_list, i[0],"texture_3.png")
-                    if i[0] == 2:
-                        overlay(frame, ar_list, i[0],"texture_4.png")
+#                             ar_list = detect_markers(frame)
+#                 for i in ar_list:
+# ##                        if i[0] == 8:
+# ##                                overlay(frame, ar_list, i[0],"texture_1.png")
+# ##                        if i[0] == 2:
+# ##                                overlay(frame, ar_list, i[0],"texture_2.png")
+# ##                        if i[0] == 7:
+# ##                                overlay(frame, ar_list, i[0],"texture_3.png")
+#                     if i[0] == 2:
+#                         overlay(frame, ar_list, i[0],"texture_4.png")
 
                 cv2.imshow('frame', frame)
                 cv2.waitKey(1)
@@ -170,35 +170,29 @@ def draw_background(img):
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         cv2.flip(img, 0, img)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+        glLoadIdentity()
+
+        glEnable(GL_TEXTURE_2D)
+
 
         glBindTexture(GL_TEXTURE_2D, texture_background)
-
-        glTexImage2D(GL_TEXTURE_2D,
-        0,
-        GL_RGB,
-        width,
-        height,
-        0,
-        GL_RGB,
-        GL_UNSIGNED_BYTE,
-        img)
-        glEnable(GL_TEXTURE_2D)
-        #glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT)
-        #glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT)
-        #glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL)
-        #this one is necessary with texture2d for some reason
+        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, img)
 
-        # Set Projection Matrix
+
+        #Set Projection Matrix
         glMatrixMode(GL_PROJECTION)
         glLoadIdentity()
         gluOrtho2D(0, width, 0, height)
 
         # Switch to Model View Matrix
-        # glMatrixMode(GL_MODELVIEW)
-        # glLoadIdentity()
+        glMatrixMode(GL_MODELVIEW)
+        glLoadIdentity()
 
         # Draw textured Quads
+        glBindTexture(GL_TEXTURE_2D, texture_background)
+        glPushMatrix()
         glBegin(GL_QUADS)
         glTexCoord2f(0.0, 0.0)
         glVertex2f(0.0, 0.0)
@@ -210,8 +204,7 @@ def draw_background(img):
         glVertex2f(0.0, height)
         glEnd()
 
-
-        glDisable(GL_TEXTURE_2D)
+        glPopMatrix()
 
         return None
 
@@ -228,30 +221,15 @@ def init_object_texture(image_filepath):
         height, width = tex.shape[:2]
         tex = cv2.cvtColor(tex, cv2.COLOR_BGR2RGB)
 
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
-
+        glEnable(GL_TEXTURE_2D)
         glBindTexture(GL_TEXTURE_2D, texture_object)
 
-        glTexImage2D(GL_TEXTURE_2D,
-        0,
-        GL_RGB,
-        width,
-        height,
-        0,
-        GL_RGB,
-        GL_UNSIGNED_BYTE,
-        tex)
-        glEnable(GL_TEXTURE_2D)
-        #glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT)
-        #glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT)
-        #glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL)
-        #this one is necessary with texture2d for some reason
+        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
+        glTexImage2D(GL_TEXTURE_2D, 0, 3, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, tex)
 
-        # Set Projection Matrix
-        glMatrixMode(GL_PROJECTION)
-        glLoadIdentity()
-        gluOrtho2D(0, width, 0, height)
+
+
         return None
 
 """
