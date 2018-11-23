@@ -32,7 +32,7 @@ Purpose: Loads the camera calibration file provided and returns the camera and
 """
 def getCameraMatrix():
         global camera_matrix, dist_coeff
-        with np.load('System.npz') as X:
+        with np.load('Camera.npz') as X:
                 camera_matrix, dist_coeff, _, _ = [X[i] for i in ('mtx','dist','rvecs','tvecs')]
 
 
@@ -74,11 +74,12 @@ def init_gl():
         glEnable(GL_DEPTH_TEST)
         glShadeModel(GL_SMOOTH)
         glMatrixMode(GL_MODELVIEW)
-        glEnable(GL_DEPTH_TEST)
         glEnable(GL_LIGHTING)
         glEnable(GL_LIGHT0)
+        glEnable(GL_TEXTURE_2D)
         texture_background = glGenTextures(1)
         texture_object = glGenTextures(1)
+
 """
 Function Name : resize()
 Input: None
@@ -103,28 +104,29 @@ Purpose: It is the main callback function which is called again and
 """
 def drawGLScene():
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+
         ar_list = []
         ret, frame = cap.read()
         if ret == True:
                 #image_arr = array(frame)
+                ar_list = detect_markers(frame)
+                cv2.imshow('frame', frame)
+                cv2.waitKey(1)
                 draw_background(frame)
-
                 glutPostRedisplay()
                 glMatrixMode(GL_MODELVIEW)
                 glLoadIdentity()
-#                             ar_list = detect_markers(frame)
-#                 for i in ar_list:
-# ##                        if i[0] == 8:
-# ##                                overlay(frame, ar_list, i[0],"texture_1.png")
-# ##                        if i[0] == 2:
-# ##                                overlay(frame, ar_list, i[0],"texture_2.png")
-# ##                        if i[0] == 7:
-# ##                                overlay(frame, ar_list, i[0],"texture_3.png")
-#                     if i[0] == 2:
-#                         overlay(frame, ar_list, i[0],"texture_4.png")
+                for i in ar_list:
+                        # if i[0] == 8:
+                        #         overlay(frame, ar_list, i[0],"texture_1.png")
+##                        if i[0] == 2:
+##                                overlay(frame, ar_list, i[0],"texture_2.png")
+##                        if i[0] == 7:
+##                                overlay(frame, ar_list, i[0],"texture_3.png")
+                    if i[0] == 2:
+                        overlay(frame, ar_list, i[0],"texture_5.png")
 
-                cv2.imshow('frame', frame)
-                cv2.waitKey(1)
+
         glutSwapBuffers()
 
 ########################################################################
@@ -166,44 +168,31 @@ Purpose: Takes image as input and converts it into an OpenGL texture. That
          OpenGL texture is then set as background of the OpenGL scene
 """
 def draw_background(img):
+
         height, width = img.shape[:2]
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        # img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         cv2.flip(img, 0, img)
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
-        glLoadIdentity()
+        img = Image.fromarray(img)
+        ix = width
+        iy = height
+        img = img.tobytes("raw", "BGR", 0, -1)
 
-        glEnable(GL_TEXTURE_2D)
-
-
+        # create background texture
         glBindTexture(GL_TEXTURE_2D, texture_background)
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, img)
+        glTexImage2D(GL_TEXTURE_2D, 0, 3, ix, iy, 0, GL_RGB, GL_UNSIGNED_BYTE, img)
 
 
-        #Set Projection Matrix
-        glMatrixMode(GL_PROJECTION)
-        glLoadIdentity()
-        gluOrtho2D(0, width, 0, height)
-
-        # Switch to Model View Matrix
-        glMatrixMode(GL_MODELVIEW)
-        glLoadIdentity()
-
-        # Draw textured Quads
-        glBindTexture(GL_TEXTURE_2D, texture_background)
+        # draw background
         glPushMatrix()
+        glTranslatef(0.0,0.0,-10.0)
         glBegin(GL_QUADS)
-        glTexCoord2f(0.0, 0.0)
-        glVertex2f(0.0, 0.0)
-        glTexCoord2f(1.0, 0.0)
-        glVertex2f(width, 0.0)
-        glTexCoord2f(1.0, 1.0)
-        glVertex2f(width, height)
-        glTexCoord2f(0.0, 1.0)
-        glVertex2f(0.0, height)
+        glTexCoord2f(0.0, 1.0); glVertex2d(-5.5, -4.1)
+        glTexCoord2f(1.0, 1.0); glVertex2d( 5.5, -4.1)
+        glTexCoord2f(1.0, 0.0); glVertex2d( 5.5,  4.1)
+        glTexCoord2f(0.0, 0.0); glVertex2d(-5.5,  4.1)
         glEnd()
-
         glPopMatrix()
 
         return None
@@ -217,19 +206,14 @@ Purpose: Takes the filepath of a texture file as input and converts it into Open
          scene.
 """
 def init_object_texture(image_filepath):
+
         tex = cv2.imread(image_filepath)
         height, width = tex.shape[:2]
-        tex = cv2.cvtColor(tex, cv2.COLOR_BGR2RGB)
 
-        glEnable(GL_TEXTURE_2D)
         glBindTexture(GL_TEXTURE_2D, texture_object)
-
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
-        glTexImage2D(GL_TEXTURE_2D, 0, 3, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, tex)
-
-
-
+        glTexImage2D(GL_TEXTURE_2D, 0, 3, width, height, 0, GL_BGR, GL_UNSIGNED_BYTE, tex)
         return None
 
 """
@@ -249,21 +233,20 @@ def overlay(img, ar_list, ar_id, texture_file):
                 if ar_id == x[0]:
                         centre, rvec, tvec = x[1], x[2], x[3]
         rmtx = cv2.Rodrigues(rvec)[0]
-        print tvec
-        #glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+        print centre
 
-        view_matrix = np.array([[rmtx[0][0],rmtx[0][1],rmtx[0][2],tvec[0]],
-                        [rmtx[1][0],rmtx[1][1],rmtx[1][2],tvec[1]],
-                        [rmtx[2][0],rmtx[2][1],rmtx[2][2],tvec[2]],
+        view_matrix = np.array([[rmtx[0][0],rmtx[0][1],rmtx[0][2],(centre[0]-320)/125],
+                        [rmtx[1][0],rmtx[1][1],rmtx[1][2],0],
+                        [rmtx[2][0],rmtx[2][1],rmtx[2][2],tvec[2]/80],
                         [0.0       ,0.0       ,0.0       ,1.0    ]])
         view_matrix = view_matrix * INVERSE_MATRIX
         view_matrix = np.transpose(view_matrix)
 
-
-        #init_object_texture(texture_file)
+        init_object_texture(texture_file)
         glPushMatrix()
         glLoadMatrixd(view_matrix)
-        glutSolidTeapot(-.5,20,-20)
+        #glutSolidTeapot(-.5,20,-20)
+        glutSolidTeapot(0.5)
         glPopMatrix()
 
 

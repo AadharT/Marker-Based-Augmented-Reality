@@ -4,8 +4,8 @@ from OpenGL.GLU import *
 import cv2
 from PIL import Image
 import numpy as np
-# from webcam import Webcam
-#from glyphs import *
+from webcam import Webcam
+from glyphs import *
 
 class OpenGLGlyphs:
 
@@ -17,8 +17,8 @@ class OpenGLGlyphs:
 
     def __init__(self):
         # initialise webcam and start thread
-        # self.webcam = Webcam()
-        # self.webcam.start()
+        self.webcam = Webcam()
+        self.webcam.start()
 
         # textures
         self.texture_background = None
@@ -41,10 +41,10 @@ class OpenGLGlyphs:
         self.texture_cube = glGenTextures(1)
 
         # create cube texture
-        image = cv2.imread("texture_4.png")
-        ix = image.shape[0]
-        iy = image.shape[1]
-        #image = image.tobytes("raw", "RGBX", 0, -1)
+        image = Image.open("devil.jpg")
+        ix = image.size[0]
+        iy = image.size[1]
+        image = image.tostring("raw", "RGBX", 0, -1)
 
         glBindTexture(GL_TEXTURE_2D, self.texture_cube)
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
@@ -56,12 +56,13 @@ class OpenGLGlyphs:
         glLoadIdentity()
 
         # get image from webcam
-        a = cv2.VideoCapture(0)
-        ret, image = a.read()        # convert image to OpenGL texture f
+        image = self.webcam.get_current_frame()
+
+        # convert image to OpenGL texture format
         bg_image = cv2.flip(image, 0)
-        #bg_image = Image.fromarray(bg_image)
-        ix = bg_image.shape[0]
-        iy = bg_image.shape[1]
+        bg_image = Image.fromarray(bg_image)
+        ix = bg_image.size[0]
+        iy = bg_image.size[1]
         bg_image = bg_image.tostring("raw", "BGRX", 0, -1)
 
         # create background texture
@@ -78,42 +79,42 @@ class OpenGLGlyphs:
         glPopMatrix()
 
         # handle glyph
-    #    image = self._handle_glyph(image)
+        image = self._handle_glyph(image)
 
         glutSwapBuffers()
 
-    # def _handle_glyph(self, image):
-    #
-    #     # attempt to detect glyph
-    #     rvecs = None
-    #     tvecs = None
-    #
-    #     try:
-    #         rvecs, tvecs = detect_glyph(image)
-    #     except Exception as ex:
-    #         print(ex)
-    #
-    #     if rvecs == None or tvecs == None:
-    #         return
-    #
-    #     # build view matrix
-    #     rmtx = cv2.Rodrigues(rvecs)[0]
-    #
-    #     view_matrix = np.array([[rmtx[0][0],rmtx[0][1],rmtx[0][2],tvecs[0]],
-    #                             [rmtx[1][0],rmtx[1][1],rmtx[1][2],tvecs[1]],
-    #                             [rmtx[2][0],rmtx[2][1],rmtx[2][2],tvecs[2]],
-    #                             [0.0       ,0.0       ,0.0       ,1.0    ]])
-    #
-    #     view_matrix = view_matrix * self.INVERSE_MATRIX
-    #
-    #     view_matrix = np.transpose(view_matrix)
-    #
-    #     # load view matrix and draw cube
-    #     glBindTexture(GL_TEXTURE_2D, self.texture_cube)
-    #     glPushMatrix()
-    #     glLoadMatrixd(view_matrix)
-    #     self._draw_cube()
-    #     glPopMatrix()
+    def _handle_glyph(self, image):
+
+        # attempt to detect glyph
+        rvecs = None
+        tvecs = None
+
+        try:
+            rvecs, tvecs = detect_glyph(image)
+        except Exception as ex:
+            print(ex)
+
+        if rvecs == None or tvecs == None:
+            return
+
+        # build view matrix
+        rmtx = cv2.Rodrigues(rvecs)[0]
+
+        view_matrix = np.array([[rmtx[0][0],rmtx[0][1],rmtx[0][2],tvecs[0]],
+                                [rmtx[1][0],rmtx[1][1],rmtx[1][2],tvecs[1]],
+                                [rmtx[2][0],rmtx[2][1],rmtx[2][2],tvecs[2]],
+                                [0.0       ,0.0       ,0.0       ,1.0    ]])
+
+        view_matrix = view_matrix * self.INVERSE_MATRIX
+
+        view_matrix = np.transpose(view_matrix)
+
+        # load view matrix and draw cube
+        glBindTexture(GL_TEXTURE_2D, self.texture_cube)
+        glPushMatrix()
+        glLoadMatrixd(view_matrix)
+        self._draw_cube()
+        glPopMatrix()
 
     def _draw_cube(self):
         # draw cube
